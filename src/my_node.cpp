@@ -8,11 +8,6 @@
 
 using namespace godot;
 
-static void _print(const char *s)
-{
-	UtilityFunctions::print(s);
-}
-
 void MyNode::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("hello_node"), &MyNode::hello_node);
@@ -20,6 +15,7 @@ void MyNode::_bind_methods()
 
 MyNode::MyNode()
 {
+    UtilityFunctions::print("Init...");
 	init_chuck();
 }
 
@@ -32,15 +28,22 @@ MyNode::~MyNode()
 
 void MyNode::_ready()
 {
+    UtilityFunctions::print("Ready...");
 	ready_chuck();
 }
 
 void MyNode::_process(double delta)
 {
+    UtilityFunctions::print("Processing...");
+
 	if(process_chuck() == 1)
 	{
-		// do something
+		UtilityFunctions::print("ChucK is running...");
 	}
+    else
+    {
+        UtilityFunctions::print("ChucK is not running...");
+    }
 }
 
 godot::String MyNode::hello_node()

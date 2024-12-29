@@ -1,7 +1,7 @@
 #pragma once
 
 #include <godot_cpp/classes/node.hpp>
-#include <chuck/src/core/chuck.h>
+#include <chuck.h>
 
 using namespace godot;
 
