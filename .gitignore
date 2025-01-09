@@ -15,7 +15,3 @@
 
 # compiled files
 build/
-# chuck.tab.c
-# chuck.tab.h
-# chuck.yy.c
-# chuck.output
