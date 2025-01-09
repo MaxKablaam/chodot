@@ -1,4 +1,4 @@
-#include "my_node.hpp"
+#include "chuck_vm_manager.hpp"
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -8,10 +8,12 @@
 #include <iostream>
 #include <streambuf>
 #include <string>
+// TODO: #include <mutex>
 
 using namespace godot;
 
-std::unordered_map<std::string, MyNode*> MyNode::instance_map;
+std::unordered_map<std::string, ChuckVMManager*> ChuckVMManager::instance_map;
+// TODO: std::mutex event_mutex;
 
 // Custom stream buffer to capture stderr and stdout
 class StreamRedirector : public std::streambuf {
@@ -38,29 +40,29 @@ std::streambuf *original_stderr_buf = nullptr;
 std::streambuf *original_stdout_buf = nullptr;
 
 
-void MyNode::_bind_methods()
+void ChuckVMManager::_bind_methods()
 {
-    ClassDB::bind_method(D_METHOD("get_audio_stream_player"), &MyNode::get_audio_stream_player);
-	ClassDB::bind_method(D_METHOD("set_audio_stream_player", "p_audio_stream_player"), &MyNode::set_audio_stream_player);
+    ClassDB::bind_method(D_METHOD("get_audio_stream_player"), &ChuckVMManager::get_audio_stream_player);
+	ClassDB::bind_method(D_METHOD("set_audio_stream_player", "p_audio_stream_player"), &ChuckVMManager::set_audio_stream_player);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "AudioStreamPlayer", PROPERTY_HINT_NODE_TYPE, "AudioStreamPlayer"), "set_audio_stream_player", "get_audio_stream_player");
 
-	ClassDB::bind_method(D_METHOD("hello_node"), &MyNode::hello_node);
+	ClassDB::bind_method(D_METHOD("hello_node"), &ChuckVMManager::hello_node);
 
-    ClassDB::bind_method(D_METHOD("get_shred_ids"), &MyNode::get_shred_ids);
-    ClassDB::bind_method(D_METHOD("run_code", "code"), &MyNode::run_code);
-    ClassDB::bind_method(D_METHOD("add_shred", "filename"), &MyNode::add_shred);
-    ClassDB::bind_method(D_METHOD("remove_last_shred"), &MyNode::remove_last_shred);
-    ClassDB::bind_method(D_METHOD("remove_shred", "shredID"), &MyNode::remove_shred);
-    ClassDB::bind_method(D_METHOD("remove_all_shreds"), &MyNode::remove_all_shreds);
+    ClassDB::bind_method(D_METHOD("get_shred_ids"), &ChuckVMManager::get_shred_ids);
+    ClassDB::bind_method(D_METHOD("run_code", "code"), &ChuckVMManager::run_code);
+    ClassDB::bind_method(D_METHOD("add_shred", "filename"), &ChuckVMManager::add_shred);
+    ClassDB::bind_method(D_METHOD("remove_last_shred"), &ChuckVMManager::remove_last_shred);
+    ClassDB::bind_method(D_METHOD("remove_shred", "shredID"), &ChuckVMManager::remove_shred);
+    ClassDB::bind_method(D_METHOD("remove_all_shreds"), &ChuckVMManager::remove_all_shreds);
 
-    ClassDB::bind_method(D_METHOD("broadcast_global_event", "name"), &MyNode::broadcast_global_event);
-    ClassDB::bind_method(D_METHOD("set_global_float", "name", "value"), &MyNode::set_global_float);
-    ClassDB::bind_method(D_METHOD("set_global_int", "name", "value"), &MyNode::set_global_int);
+    ClassDB::bind_method(D_METHOD("broadcast_global_event", "name"), &ChuckVMManager::broadcast_global_event);
+    ClassDB::bind_method(D_METHOD("set_global_float", "name", "value"), &ChuckVMManager::set_global_float);
+    ClassDB::bind_method(D_METHOD("set_global_int", "name", "value"), &ChuckVMManager::set_global_int);
 
     ADD_SIGNAL(MethodInfo("chuck_event", PropertyInfo(Variant::STRING, "event")));
 };
 
-MyNode::MyNode()
+ChuckVMManager::ChuckVMManager()
 {
     // Redirect stderr
     std::cerr.rdbuf(stderr_redirector);
@@ -100,7 +102,7 @@ MyNode::MyNode()
 	UtilityFunctions::print("Chuck Initiated.");
 }
 
-MyNode::~MyNode()
+ChuckVMManager::~ChuckVMManager()
 {
     // deallocate
     cleanup_global_buffers();
@@ -122,7 +124,7 @@ MyNode::~MyNode()
     CK_SAFE_DELETE( stderr_redirector );
 }
 
-void MyNode::_ready()
+void ChuckVMManager::_ready()
 {
     if (!the_chuck->vm_running()) {
         UtilityFunctions::print("ChucK VM not running.");
@@ -130,7 +132,7 @@ void MyNode::_ready()
     }
 }
 
-void MyNode::_process(double delta)
+void ChuckVMManager::_process(double delta)
 {
     // check if we have an audio stream player
     if (audio_stream_player == nullptr)
@@ -163,7 +165,7 @@ void MyNode::_process(double delta)
     }
 }
 
-godot::String MyNode::hello_node()
+godot::String ChuckVMManager::hello_node()
 {
 	return "Hello GDExtension Node\n";
 }
@@ -172,7 +174,7 @@ godot::String MyNode::hello_node()
 // Shred Manipulation
 //-----------------------------------------------------------------------------
 
-godot::PackedInt32Array MyNode::get_shred_ids()
+godot::PackedInt32Array ChuckVMManager::get_shred_ids()
 {
     PackedInt32Array packed_shred_ids;
 
@@ -188,7 +190,7 @@ godot::PackedInt32Array MyNode::get_shred_ids()
 }
 
 // TODO: Printout from <<< >>> is not captured by stderr redirector
-void MyNode::run_code(godot::String code)
+void ChuckVMManager::run_code(godot::String code)
 {
     string content = code.utf8().get_data();
     if (!the_chuck->compileCode( content, "", 1, FALSE)) {
@@ -208,7 +210,7 @@ void MyNode::run_code(godot::String code)
     }
 }
 
-void MyNode::add_shred(godot::String filename)
+void ChuckVMManager::add_shred(godot::String filename)
 {
     string file = filename.utf8().get_data();
     // compile file; FALSE means deferred spork -- thread-safe since
@@ -234,7 +236,7 @@ void MyNode::add_shred(godot::String filename)
     }
 }
 
-void MyNode::remove_last_shred()
+void ChuckVMManager::remove_last_shred()
 {
     // if no shreds to remove
     if( !shredIDs.size() )
@@ -256,7 +258,7 @@ void MyNode::remove_last_shred()
     shredIDs.pop_back();
 }
 
-void MyNode::remove_shred(int _shredID)
+void ChuckVMManager::remove_shred(int _shredID)
 {
     // create a message; VM will delete
     Chuck_Msg * msg = new Chuck_Msg;
@@ -270,7 +272,7 @@ void MyNode::remove_shred(int _shredID)
     cerr << "removing shred with ID: " << _shredID << endl;
 }
 
-void MyNode::remove_all_shreds()
+void ChuckVMManager::remove_all_shreds()
 {
     // create a message; VM will delete
     Chuck_Msg * msg = new Chuck_Msg;
@@ -291,18 +293,18 @@ void MyNode::remove_all_shreds()
 // Globals
 //-----------------------------------------------------------------------------
 
-void MyNode::register_global_events()
+void ChuckVMManager::register_global_events()
 {
     the_chuck->globals()->getAllGlobalVariables(all_globals_cb_static, this);
 }
 
-void MyNode::all_globals_cb_static(const vector<Chuck_Globals_TypeValue> &list, void *data)
+void ChuckVMManager::all_globals_cb_static(const vector<Chuck_Globals_TypeValue> &list, void *data)
 {
-    MyNode *self = static_cast<MyNode *>(data);
+    ChuckVMManager *self = static_cast<ChuckVMManager *>(data);
     self->all_globals_cb(list);
 }
 
-void MyNode::all_globals_cb( const vector<Chuck_Globals_TypeValue> & list )
+void ChuckVMManager::all_globals_cb( const vector<Chuck_Globals_TypeValue> & list )
 {
     for( t_CKUINT i = 0; i < list.size(); i++ )
     {
@@ -324,7 +326,7 @@ void MyNode::all_globals_cb( const vector<Chuck_Globals_TypeValue> & list )
     }
 }
 
-void MyNode::event_listener_cb_static(const char* name)
+void ChuckVMManager::event_listener_cb_static(const char* name)
 {
     // Look up the instance and call the non-static method
     if (instance_map.find(name) != instance_map.end()) {
@@ -332,24 +334,36 @@ void MyNode::event_listener_cb_static(const char* name)
     }
 }
 
-void MyNode::event_listener_cb(const char* name)
+void ChuckVMManager::event_listener_cb(const char* name)
 {
+    // TODO: ...
+    // Lock the mutex
+    //std::lock_guard<std::mutex> lock(event_mutex);
+
+    // print
     cerr << "global event: " << name << endl;
+
+    // Get the event
+    //const Chuck_Event* event = the_chuck->globals()->get_global_event(name);
+
+    // TODO: How to get the event properties?
+
+    // Emit the signal
     emit_signal("chuck_event", String(name));
 }
 
-void MyNode::broadcast_global_event(String name)
+void ChuckVMManager::broadcast_global_event(String name)
 {
     the_chuck->globals()->broadcastGlobalEvent( name.utf8().get_data() );
 }
 
-void MyNode::set_global_float(String name, double value)
+void ChuckVMManager::set_global_float(String name, double value)
 {
     the_chuck->globals()->setGlobalFloat( name.utf8().get_data(), value );
     cerr << "setting global float: " << name.utf8().get_data() << " to " << value << endl;
 }
 
-void MyNode::set_global_int(String name, int value)
+void ChuckVMManager::set_global_int(String name, int value)
 {
     the_chuck->globals()->setGlobalInt( name.utf8().get_data(), value );
     cerr << "setting global int: " << name.utf8().get_data() << " to " << value << endl;
@@ -358,7 +372,7 @@ void MyNode::set_global_int(String name, int value)
 //-----------------------------------------------------------------------------
 // initialize global audio buffers
 //-----------------------------------------------------------------------------
-void MyNode::alloc_global_buffers( t_CKINT bufferSize )
+void ChuckVMManager::alloc_global_buffers( t_CKINT bufferSize )
 {
     // good practice to clean, in case this function is called more than once
     cleanup_global_buffers();
@@ -377,7 +391,7 @@ void MyNode::alloc_global_buffers( t_CKINT bufferSize )
 //-----------------------------------------------------------------------------
 // cleanup global audio buffers
 //-----------------------------------------------------------------------------
-void MyNode::cleanup_global_buffers()
+void ChuckVMManager::cleanup_global_buffers()
 {
     // reclaim memory
     CK_SAFE_DELETE_ARRAY( g_inputBuffer );
