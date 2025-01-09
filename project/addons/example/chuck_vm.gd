@@ -1,4 +1,4 @@
-class_name ChuckVM extends MyNode
+class_name ChuckVM extends ChuckVMManager
 
 @export var chuck_files: Array[ChuckFile]
 

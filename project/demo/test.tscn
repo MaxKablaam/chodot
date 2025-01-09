@@ -17,7 +17,7 @@ offset_bottom = 23.0
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 stream = SubResource("AudioStreamGenerator_fjwav")
 
-[node name="ChuckVM" type="MyNode" parent="." node_paths=PackedStringArray("AudioStreamPlayer")]
+[node name="ChuckVM" type="ChuckVMManager" parent="." node_paths=PackedStringArray("AudioStreamPlayer")]
 AudioStreamPlayer = NodePath("../AudioStreamPlayer")
 script = ExtResource("2_uvsjg")
 chuck_files = Array[ExtResource("3_7sgsd")]([ExtResource("4_d8du1")])

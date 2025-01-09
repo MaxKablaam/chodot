@@ -9,9 +9,9 @@
 
 using namespace godot;
 
-class MyNode : public Node
+class ChuckVMManager : public Node
 {
-	GDCLASS(MyNode, Node);
+	GDCLASS(ChuckVMManager, Node);
 
 private:
 	// our ChucK instance
@@ -27,7 +27,7 @@ private:
 	// Reference to godot audio stream player
 	AudioStreamPlayer* audio_stream_player = nullptr;
 
-	static std::unordered_map<std::string, MyNode*> instance_map;
+	static std::unordered_map<std::string, ChuckVMManager*> instance_map;
 	std::vector<std::string> registered_events;
 
 	// shred id
@@ -56,8 +56,8 @@ protected:
 	static void _bind_methods();
 
 public:
-	MyNode();
-	~MyNode();
+	ChuckVMManager();
+	~ChuckVMManager();
 
 	void _ready() override;
 	void _process(double delta) override;
