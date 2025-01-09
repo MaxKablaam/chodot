@@ -3,7 +3,7 @@
 #include <gdextension_interface.h>
 #include <godot_cpp/classes/engine.hpp>
 
-#include "my_node.hpp"
+#include "chuck_vm_manager.hpp"
 #include "my_singleton.hpp"
 
 static MySingleton *_my_singleton;
@@ -12,7 +12,7 @@ void gdextension_initialize(ModuleInitializationLevel p_level)
 {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE)
 	{
-		ClassDB::register_class<MyNode>();
+		ClassDB::register_class<ChuckVMManager>();
 		ClassDB::register_class<MySingleton>();
 
 		_my_singleton = memnew(MySingleton);
