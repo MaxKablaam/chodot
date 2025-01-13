@@ -1,4 +1,5 @@
 #include "chuck_vm_manager.hpp"
+#include "my_singleton.hpp"
 
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
@@ -58,6 +59,10 @@ void ChuckVMManager::_bind_methods()
     ClassDB::bind_method(D_METHOD("broadcast_global_event", "name"), &ChuckVMManager::broadcast_global_event);
     ClassDB::bind_method(D_METHOD("set_global_float", "name", "value"), &ChuckVMManager::set_global_float);
     ClassDB::bind_method(D_METHOD("set_global_int", "name", "value"), &ChuckVMManager::set_global_int);
+    ClassDB::bind_method(D_METHOD("watch_global_float", "name"), &ChuckVMManager::register_global_float);
+    ClassDB::bind_method(D_METHOD("watch_global_int", "name"), &ChuckVMManager::register_global_int);
+    ClassDB::bind_method(D_METHOD("get_global_float", "name"), &ChuckVMManager::get_global_float);
+    ClassDB::bind_method(D_METHOD("get_global_int", "name"), &ChuckVMManager::get_global_int);
 
     ADD_SIGNAL(MethodInfo("chuck_event", PropertyInfo(Variant::STRING, "event")));
 };
@@ -91,7 +96,7 @@ ChuckVMManager::ChuckVMManager()
     // chuck->setLogLevel( 3 );
 
     // allocate audio buffers, also after parameters are set
-    alloc_global_buffers( 1024 );
+    alloc_global_buffers( 2048 );
 
     // initialize ChucK, after the parameters are set
     the_chuck->init();
@@ -134,6 +139,10 @@ void ChuckVMManager::_ready()
 
 void ChuckVMManager::_process(double delta)
 {
+    // TODO Need to find a better home for this where it's only called once a frame,
+    // just don't know how to get a singleton to update at the moment.
+    MySingleton::get_singleton()->process_global_variable_callback_results();
+
     // check if we have an audio stream player
     if (audio_stream_player == nullptr)
     {
@@ -147,7 +156,7 @@ void ChuckVMManager::_process(double delta)
         if (p.is_valid())
         {
             // Get the number of frames available
-            int nframes = std::min(p->get_frames_available(), 2048);
+            t_CKINT nframes = std::min((t_CKINT)p->get_frames_available(), g_bufferSize);
 
             // Fill buffers with audio data
             the_chuck->run(g_inputBuffer, g_outputBuffer, nframes);
@@ -161,6 +170,26 @@ void ChuckVMManager::_process(double delta)
             // Push the audio data to the stream
             p->push_buffer(out_buffer_frames);
 
+        }
+    }
+
+    // Attempt to get all registered variables every frame.
+    // Callbacks will come in and be processed on the beginning of the next frame.
+    for (size_t i = 0; i < registered_global_variables.size(); ++i)
+    {
+        CallbackContext newCallbackContext;
+        newCallbackContext.m_variableName = registered_global_variables[i].name;
+        newCallbackContext.m_vmManager = this;
+
+        if (registered_global_variables[i].type == GlobalVariableContainer::Type::Int)
+        {
+            MySingleton::get_singleton()->add_new_callback_context(newCallbackContext);
+            the_chuck->globals()->getGlobalInt(newCallbackContext.m_variableName.c_str(), newCallbackContext.m_callbackID, &MySingleton::get_global_int_callback);
+        }
+        else if (registered_global_variables[i].type == GlobalVariableContainer::Type::Float)
+        {
+            MySingleton::get_singleton()->add_new_callback_context(newCallbackContext);
+            the_chuck->globals()->getGlobalFloat(newCallbackContext.m_variableName.c_str(), newCallbackContext.m_callbackID, &MySingleton::get_global_float_callback);
         }
     }
 }
@@ -357,16 +386,73 @@ void ChuckVMManager::broadcast_global_event(String name)
     the_chuck->globals()->broadcastGlobalEvent( name.utf8().get_data() );
 }
 
-void ChuckVMManager::set_global_float(String name, double value)
+void ChuckVMManager::set_global_float(const String& name, double value)
 {
     the_chuck->globals()->setGlobalFloat( name.utf8().get_data(), value );
     cerr << "setting global float: " << name.utf8().get_data() << " to " << value << endl;
 }
 
-void ChuckVMManager::set_global_int(String name, int value)
+void ChuckVMManager::set_global_int(const String& name, int value)
 {
     the_chuck->globals()->setGlobalInt( name.utf8().get_data(), value );
     cerr << "setting global int: " << name.utf8().get_data() << " to " << value << endl;
+}
+
+void ChuckVMManager::register_global_float(const String& name)
+{
+    GlobalVariableContainer newContainer;
+    newContainer.name = name.ascii();
+    newContainer.type = GlobalVariableContainer::Type::Float;
+    newContainer.value = (t_CKFLOAT)0.f;
+    registered_global_variables.push_back(newContainer);
+}
+
+void ChuckVMManager::register_global_int(const String& name)
+{
+    GlobalVariableContainer newContainer;
+    newContainer.name = name.ascii();
+    newContainer.type = GlobalVariableContainer::Type::Int;
+    newContainer.value = (t_CKINT)0;
+    registered_global_variables.push_back(newContainer);
+}
+
+t_CKFLOAT ChuckVMManager::get_global_float(const String& name)
+{
+    std::string stdName = name.ascii();
+    if (const GlobalVariableContainer* container = find_registered_global_variable(stdName))
+    {
+        if (container->value.has_value())
+        {
+            return std::any_cast<t_CKFLOAT>(container->value);
+        }
+    }
+
+    return 0.f;
+}
+
+t_CKINT ChuckVMManager::get_global_int(const String& name)
+{
+    std::string stdName = name.ascii();
+    if (const GlobalVariableContainer* container = find_registered_global_variable(stdName))
+    {
+        if (container->value.has_value())
+        {
+            return std::any_cast<t_CKINT>(container->value);
+        }
+    }
+
+    return 0;
+}
+
+ChuckVMManager::GlobalVariableContainer* ChuckVMManager::find_registered_global_variable(const std::string& name)
+{
+    auto containerIter = std::find_if(registered_global_variables.begin(), registered_global_variables.end(), [&](const auto& container){ return container.name == name; });
+    if (containerIter != registered_global_variables.end())
+    {
+        return &(*containerIter);
+    }
+
+    return nullptr;
 }
 
 //-----------------------------------------------------------------------------
