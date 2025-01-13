@@ -31,8 +31,8 @@ func _ready() -> void:
 # This will be called every frame, after global variables have been updated from ChucK callbacks.
 func _on_global_variables_processed():
 	# Very spammy, uncomment to test out global variable reads.
-	print(global_name_frequency, "=", get_global_float(global_name_frequency))
-	print(global_name_filter, "=", get_global_float(global_name_filter))
+	#print(global_name_frequency, "=", get_global_float(global_name_frequency))
+	#print(global_name_filter, "=", get_global_float(global_name_filter))
 	pass
 
 func _on_chuck_event(name: String):
