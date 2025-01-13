@@ -49,6 +49,12 @@ t_CKINT MySingleton::get_next_callback_id()
 	return nextID;
 }
 
+void MySingleton::add_new_callback_context(CallbackContext& callbackContext)
+{
+	callbackContext.m_callbackID = get_next_callback_id();
+	m_callbackContexts.push_back(callbackContext);
+}
+
 void MySingleton::process_global_variable_callback_results()
 {
 	std::vector<CallbackResult> callbackResultsToProcess;
