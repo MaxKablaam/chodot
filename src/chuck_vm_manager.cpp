@@ -401,7 +401,7 @@ void ChuckVMManager::set_global_int(const String& name, int value)
 void ChuckVMManager::register_global_float(const String& name)
 {
     GlobalVariableContainer newContainer;
-    newContainer.name = name.ascii();
+    newContainer.name = name.utf8().get_data();
     newContainer.type = GlobalVariableContainer::Type::Float;
     newContainer.value = (t_CKFLOAT)0.f;
     registered_global_variables.push_back(newContainer);
@@ -410,7 +410,7 @@ void ChuckVMManager::register_global_float(const String& name)
 void ChuckVMManager::register_global_int(const String& name)
 {
     GlobalVariableContainer newContainer;
-    newContainer.name = name.ascii();
+    newContainer.name = name.utf8().get_data();
     newContainer.type = GlobalVariableContainer::Type::Int;
     newContainer.value = (t_CKINT)0;
     registered_global_variables.push_back(newContainer);
@@ -418,7 +418,7 @@ void ChuckVMManager::register_global_int(const String& name)
 
 t_CKFLOAT ChuckVMManager::get_global_float(const String& name)
 {
-    std::string stdName = name.ascii();
+    std::string stdName = name.utf8().get_data();
     if (const GlobalVariableContainer* container = find_registered_global_variable(stdName))
     {
         if (container->value.has_value())
@@ -432,7 +432,7 @@ t_CKFLOAT ChuckVMManager::get_global_float(const String& name)
 
 t_CKINT ChuckVMManager::get_global_int(const String& name)
 {
-    std::string stdName = name.ascii();
+    std::string stdName = name.utf8().get_data();
     if (const GlobalVariableContainer* container = find_registered_global_variable(stdName))
     {
         if (container->value.has_value())
