@@ -6,6 +6,11 @@ from pathlib import Path
 
 # TODO: Do not copy environment after godot-cpp/test is updated <https://github.com/godotengine/godot-cpp/blob/master/test/SConstruct>.
 env = SConscript("godot-cpp/SConstruct")
+env.Replace(CC = 'gcc', 
+            CXX = 'g++', 
+            LINK = 'g++', 
+            LEX = 'flex', 
+            YACC = 'bison')
 
 # Add source files.
 env.Append(CPPPATH=["src/"])
@@ -45,13 +50,18 @@ if env["platform"] == "macos":
 
 if not use_pregenerated_yacc_header:
 
+    build_dir = 'build'
+    # Ensure the build directory exists
+    if not os.path.exists(build_dir):
+        os.makedirs(build_dir)
+
     # Function to run bison
     def run_bison(target, source, env):
-        subprocess.run(['bison', '-dv', '-b', 'chuck', 'chuck/src/core/chuck.y'], check=True)
+        subprocess.run(['bison', '-dv', '-b', os.path.join(build_dir, 'chuck'), 'chuck/src/core/chuck.y'], check=True)
 
     # Function to run flex
     def run_flex(target, source, env):
-        subprocess.run(['flex', '-o', 'chuck.yy.c', 'chuck/src/core/chuck.lex'], check=True)
+        subprocess.run(['flex', '-o', os.path.join(build_dir, 'chuck.yy.c'), 'chuck/src/core/chuck.lex'], check=True)
 
     # Add custom builders for bison and flex
     bison_builder = Builder(action=run_bison)
@@ -60,15 +70,17 @@ if not use_pregenerated_yacc_header:
     env.Append(BUILDERS={'Bison': bison_builder, 'Flex': flex_builder})
 
     # Generate chuck.tab.h and chuck.tab.c using bison
-    bison_output = env.Bison(target=['chuck.tab.c', 'chuck.tab.h'], source='chuck/src/core/chuck.y')
+    bison_output = env.Bison(target=[os.path.join(build_dir, 'chuck.tab.c'), os.path.join(build_dir, 'chuck.tab.h')], 
+                             source='chuck/src/core/chuck.y')
 
     # Generate chuck.yy.c using flex
-    flex_output = env.Flex(target='chuck.yy.c', source='chuck/src/core/chuck.lex')
+    flex_output = env.Flex(target=os.path.join(build_dir, 'chuck.yy.c'), source='chuck/src/core/chuck.lex')
+    
     env.Depends(flex_output, bison_output)
 
     # Add the generated files to the sources list
-    sources += ['chuck.tab.c', 'chuck.yy.c']
-
+    sources += [os.path.join(build_dir, 'chuck.tab.c'), os.path.join(build_dir, 'chuck.yy.c')]
+    
     # Add the directory containing chuck.tab.h to the include path
     env.Append(CPPPATH=['.'])
 
