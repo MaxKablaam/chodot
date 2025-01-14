@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <unordered_map>
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/audio_stream_player.hpp>
@@ -13,6 +14,19 @@ class ChuckVMManager : public Node
 {
 	GDCLASS(ChuckVMManager, Node);
 
+public:
+	struct GlobalVariableContainer
+	{
+		enum class Type
+		{
+			Int,
+			Float
+		};
+		Type type;
+		std::string name;
+		std::any value;
+	};
+
 private:
 	// our ChucK instance
 	ChucK * the_chuck = NULL;
@@ -23,12 +37,13 @@ private:
 	// our audio buffer size
 	t_CKINT g_bufferSize = 0;
 
-
 	// Reference to godot audio stream player
 	AudioStreamPlayer* audio_stream_player = nullptr;
 
 	static std::unordered_map<std::string, ChuckVMManager*> instance_map;
 	std::vector<std::string> registered_events;
+
+	std::vector<GlobalVariableContainer> registered_global_variables;
 
 	// shred id
     t_CKUINT shredID = 0;
@@ -76,8 +91,13 @@ public:
 	void register_global_events();
 	void broadcast_global_event(String name);
 	//TODO: signal_globael_event
-	void set_global_float(String name, double value);
-	void set_global_int(String name, int value);
+	void set_global_float(const String& name, double value);
+	void set_global_int(const String& name, int value);
+	void register_global_float(const String& name);
+	void register_global_int(const String& name);
+	GlobalVariableContainer* find_registered_global_variable(const std::string& name);
+	t_CKFLOAT get_global_float(const String& name);
+	int64_t get_global_int(const String& name);
 
 	// Setters and Getters
 	void set_audio_stream_player(AudioStreamPlayer* p_audio_stream_player) { audio_stream_player = p_audio_stream_player; };
