@@ -430,7 +430,7 @@ t_CKFLOAT ChuckVMManager::get_global_float(const String& name)
     return 0.f;
 }
 
-t_CKINT ChuckVMManager::get_global_int(const String& name)
+int64_t ChuckVMManager::get_global_int(const String& name)
 {
     std::string stdName = name.utf8().get_data();
     if (const GlobalVariableContainer* container = find_registered_global_variable(stdName))

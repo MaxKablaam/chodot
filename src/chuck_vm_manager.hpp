@@ -97,7 +97,7 @@ public:
 	void register_global_int(const String& name);
 	GlobalVariableContainer* find_registered_global_variable(const std::string& name);
 	t_CKFLOAT get_global_float(const String& name);
-	t_CKINT get_global_int(const String& name);
+	int64_t get_global_int(const String& name);
 
 	// Setters and Getters
 	void set_audio_stream_player(AudioStreamPlayer* p_audio_stream_player) { audio_stream_player = p_audio_stream_player; };
